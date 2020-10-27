@@ -1,3 +1,7 @@
+# Powershell tool to generate a Certificate Signing Request (CSR) using a GUI interface
+# Written by Wouter Berman (2at - www.2at.nl)
+# Published under the GNU General Public License v3.0
+
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
 
