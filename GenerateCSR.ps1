@@ -18,12 +18,19 @@ function Read-SaveFileDialog{
 }
 
 function SaveRecentCSR {
-    param (
-        #OptionalParameters
-    )
     if( $null -eq (Get-Item -Path HKCU:\Software\GenerateCSR -ErrorAction:SilentlyContinue)  )
     {
         New-Item -Path HKCU:\Software\GenerateCSR
+    }
+
+    foreach( $b in ( 4,3,2,1,0) )
+    {
+        if( $b -eq 4) {
+            Remove-ItemProperty -Path HKCU:\Software\GenerateCSR -Name "Recent$b" -ErrorAction SilentlyContinue
+        }
+        else {
+            Rename-ItemProperty -Path HKCU:\Software\GenerateCSR -Name "Recent$b" -NewName "Recent$($b+1)" -ErrorAction SilentlyContinue
+        }
     }
 
     $jsonstring = "
@@ -39,13 +46,16 @@ function SaveRecentCSR {
 ]"
     $json = $jsonstring | ConvertFrom-Json 
     $jsonstringcompressed = $json | ConvertTo-Json -Compress
-    Set-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name Recent0 -Value $jsonstringcompressed
 
+    Set-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name Recent0 -Value $jsonstringcompressed
 }
 
 function LoadRecentCSR {
-        
-    $jsonstring = (Get-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name Recent0).Recent0
+    param (
+        $recentitem
+    )
+    $recentname = "Recent"+($recentitem-1)
+    $jsonstring = (Get-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name $recentname).$recentname
     $json = $jsonstring | Convertfrom-Json
 
     $TextBoxCN.Text = $json[0].CN
@@ -71,11 +81,8 @@ function ComboBoxHistorySelectedValueChanged
     }
     else 
     {
-        LoadRecentCSR
+        LoadRecentCSR $ComboBoxHistory.SelectedIndex
     }
-    
-
-
 }
 
 # Function to create a CSR using CertReq
@@ -154,9 +161,18 @@ $ComboBoxHistory.Size = New-Object System.Drawing.Size(260,30)
 $ComboBoxHistory.DropDownHeight = 200
 $form.Controls.Add($ComboBoxHistory)
 $ComboBoxHistory.Items.Add('(new)') |out-null
-$json = LoadRecentCSR
-$ComboBoxHistory.Items.Add($json[0].CN) |out-null
-$ComboBoxHistory.Items.Add('8192') |out-null
+for ($i = 0; $i -lt 5; $i++) {
+    $jsonstring = Get-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name "Recent$i" -ErrorAction SilentlyContinue
+    if( $null -ne $jsonstring)
+    {
+        $jsonstring = $jsonstring."Recent$i"
+        $json = $jsonstring | Convertfrom-Json
+        if ( $null -ne $json ){
+            $ComboBoxHistory.Items.Add($json[0].CN) |out-null
+        }
+    }
+}
+
 $ComboBoxHistory.SelectedItem = $ComboBoxHistory.Items[0]
 $ComboBoxHistory.Add_SelectedValueChanged({ComboBoxHistorySelectedValueChanged})
 
