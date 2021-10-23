@@ -21,49 +21,63 @@ function SaveRecentCSR {
     param (
         #OptionalParameters
     )
-    if( $null -eq (Get-ChildItem -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -ErrorAction:SilentlyContinue)  )
+    if( $null -eq (Get-Item -Path HKCU:\Software\GenerateCSR -ErrorAction:SilentlyContinue)  )
     {
         New-Item -Path HKCU:\Software\GenerateCSR
     }
-# "CN": "`"$($TextBoxCN.Text)`"",
-    $json = @"
-{
-"CN": `"$($TextBoxCN.Text)`",
-"OU": `"$($TextBoxOU.Text)`",
-"O": `"$($TextBoxO.Text)`",
-"L": `"$($TextBoxL.Text)`",
-"S": `"$($TextBoxS.Text)`",
-"C": `"$($TextBoxCO.Text)`"}
-"@
 
-    $jsonstring = $json.ToString()
-    Set-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name Recent0 -Value $jsonstring
+    $jsonstring = "
+[
+    {
+        `"CN`": `"$($TextBoxCN.Text)`",
+        `"OU`": `"$($TextBoxOU.Text)`",
+        `"O`": `"$($TextBoxO.Text)`",
+        `"L`": `"$($TextBoxL.Text)`",
+        `"S`": `"$($TextBoxS.Text)`",
+        `"C`": `"$($TextBoxCO.Text)`"
+    }
+]"
+    $json = $jsonstring | ConvertFrom-Json 
+    $jsonstringcompressed = $json | ConvertTo-Json -Compress
+    Set-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name Recent0 -Value $jsonstringcompressed
 
 }
 
 function LoadRecentCSR {
-    param (
-        #OptionalParameters
-    )
-    if( $null -eq (Get-ChildItem -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -ErrorAction:SilentlyContinue)  )
-    {
-        New-Item -Path HKCU:\Software\GenerateCSR
-    }
-# "CN": "`"$($TextBoxCN.Text)`"",
-    $json = @"
-{
-"CN": `"$($TextBoxCN.Text)`",
-"OU": `"$($TextBoxOU.Text)`",
-"O": `"$($TextBoxO.Text)`",
-"L": `"$($TextBoxL.Text)`",
-"S": `"$($TextBoxS.Text)`",
-"C": `"$($TextBoxCO.Text)`"}
-"@
-
-    
+        
     $jsonstring = (Get-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name Recent0).Recent0
-    $json = $jsonstring | ConvertTo-Json
+    $json = $jsonstring | Convertfrom-Json
+
+    $TextBoxCN.Text = $json[0].CN
+    $TextBoxOU.Text = $json[0].OU
+    $TextBoxO.Text = $json[0].O
+    $TextBoxL.Text = $json[0].L
+    $TextBoxS.Text = $json[0].S
+    $TextBoxCO.Text = $json[0].C
+
+    return $json
 }
+
+function ComboBoxHistorySelectedValueChanged
+{
+    if( $ComboBoxHistory.SelectedItem -eq '(new)')
+    {
+        $TextBoxCN.Text = ""
+        $TextBoxOU.Text = ""
+        $TextBoxO.Text = ""
+        $TextBoxL.Text = ""
+        $TextBoxS.Text = ""
+        $TextBoxCO.Text = ""
+    }
+    else 
+    {
+        LoadRecentCSR
+    }
+    
+
+
+}
+
 # Function to create a CSR using CertReq
 function CreateCSR {
     $InfFile = New-TemporaryFile
@@ -107,6 +121,8 @@ function CreateCSR {
         } else {
             certreq -new $InfFile $CsrFile
         }
+
+        SaveRecentCSR
     }
     If ($InfFile) {
         Remove-Item $InfFile
@@ -138,9 +154,12 @@ $ComboBoxHistory.Size = New-Object System.Drawing.Size(260,30)
 $ComboBoxHistory.DropDownHeight = 200
 $form.Controls.Add($ComboBoxHistory)
 $ComboBoxHistory.Items.Add('(new)') |out-null
-$ComboBoxHistory.Items.Add('4096') |out-null
+$json = LoadRecentCSR
+$ComboBoxHistory.Items.Add($json[0].CN) |out-null
 $ComboBoxHistory.Items.Add('8192') |out-null
 $ComboBoxHistory.SelectedItem = $ComboBoxHistory.Items[0]
+$ComboBoxHistory.Add_SelectedValueChanged({ComboBoxHistorySelectedValueChanged})
+
 
 $LabelCN = New-Object System.Windows.Forms.Label
 $LabelCN.Text = "Common name:*"
