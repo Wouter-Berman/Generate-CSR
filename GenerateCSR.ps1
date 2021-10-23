@@ -17,6 +17,53 @@ function Read-SaveFileDialog{
     return $SaveFileDialog.Filename
 }
 
+function SaveRecentCSR {
+    param (
+        #OptionalParameters
+    )
+    if( $null -eq (Get-ChildItem -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -ErrorAction:SilentlyContinue)  )
+    {
+        New-Item -Path HKCU:\Software\GenerateCSR
+    }
+# "CN": "`"$($TextBoxCN.Text)`"",
+    $json = @"
+{
+"CN": `"$($TextBoxCN.Text)`",
+"OU": `"$($TextBoxOU.Text)`",
+"O": `"$($TextBoxO.Text)`",
+"L": `"$($TextBoxL.Text)`",
+"S": `"$($TextBoxS.Text)`",
+"C": `"$($TextBoxCO.Text)`"}
+"@
+
+    $jsonstring = $json.ToString()
+    Set-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name Recent0 -Value $jsonstring
+
+}
+
+function LoadRecentCSR {
+    param (
+        #OptionalParameters
+    )
+    if( $null -eq (Get-ChildItem -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -ErrorAction:SilentlyContinue)  )
+    {
+        New-Item -Path HKCU:\Software\GenerateCSR
+    }
+# "CN": "`"$($TextBoxCN.Text)`"",
+    $json = @"
+{
+"CN": `"$($TextBoxCN.Text)`",
+"OU": `"$($TextBoxOU.Text)`",
+"O": `"$($TextBoxO.Text)`",
+"L": `"$($TextBoxL.Text)`",
+"S": `"$($TextBoxS.Text)`",
+"C": `"$($TextBoxCO.Text)`"}
+"@
+
+    
+    $jsonstring = (Get-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name Recent0).Recent0
+    $json = $jsonstring | ConvertTo-Json
+}
 # Function to create a CSR using CertReq
 function CreateCSR {
     $InfFile = New-TemporaryFile
@@ -78,6 +125,22 @@ $Form.StartPosition = "CenterScreen"
 $Form.FormBorderStyle = 'Fixed3D'
 $Form.Text = "Create CSR"
 $Form.WindowState = "Normal"
+
+$LabelHistory = New-Object System.Windows.Forms.Label
+$LabelHistory.Text = "History:*"
+$LabelHistory.AutoSize = $true
+$LabelHistory.Location = New-Object System.Drawing.Size(49,20)
+$Form.Controls.Add($LabelHistory)
+
+$ComboBoxHistory = New-Object System.Windows.Forms.ComboBox
+$ComboBoxHistory.Location = New-Object System.Drawing.Point(167,20)
+$ComboBoxHistory.Size = New-Object System.Drawing.Size(260,30)
+$ComboBoxHistory.DropDownHeight = 200
+$form.Controls.Add($ComboBoxHistory)
+$ComboBoxHistory.Items.Add('(new)') |out-null
+$ComboBoxHistory.Items.Add('4096') |out-null
+$ComboBoxHistory.Items.Add('8192') |out-null
+$ComboBoxHistory.SelectedItem = $ComboBoxHistory.Items[0]
 
 $LabelCN = New-Object System.Windows.Forms.Label
 $LabelCN.Text = "Common name:*"
