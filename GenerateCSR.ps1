@@ -94,12 +94,12 @@ function Get-SubjectPart ($subject, $part)
 }
 
 function FetchURL {
-    $URL = $TextBoxURL.Text
+    $URL = [uri]$TextBoxURL.Text
     $Certificate = $null
     $TcpClient = New-Object -TypeName System.Net.Sockets.TcpClient
     try {
 
-        $TcpClient.Connect($URL, 443)
+        $TcpClient.Connect($URL.DnsSafeHost, $URL.Port)
         $TcpStream = $TcpClient.GetStream()
 
         $Callback = { param($sender, $cert, $chain, $errors) return $true }
