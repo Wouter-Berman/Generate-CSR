@@ -8,7 +8,7 @@ Add-Type -AssemblyName System.Windows.Forms
 # Function to show a Save File Dialog and return the path.
 function Read-SaveFileDialog{
     $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-    $SaveFileDialog.InitialDirectory = $pwd
+    $SaveFileDialog.InitialDirectory = $pwd.Path
     $SaveFileDialog.Title = 'Save CSR file'
     $SaveFileDialog.Filter = 'txt files (*.txt)|*.txt|All files (*.*)|*.*'
     $SaveFileDialog.ShowHelp = $true
@@ -85,6 +85,59 @@ function ComboBoxHistorySelectedValueChanged
     }
 }
 
+function Get-SubjectPart ($subject, $part)
+{
+    $parts = $subject -split ','
+    (($parts | where{ $_.trim() -like "$part=*" }) -split "=")[1]
+}
+
+function FetchURL {
+    $URL = $TextBoxURL.Text
+    $Certificate = $null
+    $TcpClient = New-Object -TypeName System.Net.Sockets.TcpClient
+    try {
+
+        $TcpClient.Connect($URL, 443)
+        $TcpStream = $TcpClient.GetStream()
+
+        $Callback = { param($sender, $cert, $chain, $errors) return $true }
+
+        $SslStream = New-Object -TypeName System.Net.Security.SslStream -ArgumentList @($TcpStream, $true, $Callback)
+        try {
+
+            $SslStream.AuthenticateAsClient('')
+            $Certificate = $SslStream.RemoteCertificate
+
+        } finally {
+            $SslStream.Dispose()
+        }
+
+    } finally {
+        $TcpClient.Dispose()
+    }
+
+    if ($Certificate) {
+        if ($Certificate -isnot [System.Security.Cryptography.X509Certificates.X509Certificate2]) {
+            $Certificate = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList $Certificate
+        }
+        $infsubject = ($Certificate.Subject -split "`"")[1]
+        $infsubject = $Certificate.Subject
+        $TextBoxCO.Text = Get-SubjectPart $infsubject 'C'
+        $TextBoxS.Text = Get-SubjectPart $infsubject 'S'
+        $TextBoxL.Text = Get-SubjectPart $infsubject 'L'
+        $TextBoxO.Text = Get-SubjectPart $infsubject 'O'
+        $TextBoxOU.Text = Get-SubjectPart $infsubject 'OU'
+        $infcn = Get-SubjectPart $infsubject 'CN'
+        $TextBoxCN.Text = $infcn
+        
+        $sanentries = ($Certificate.Extensions | Where-Object {$_.Oid.Value -eq "2.5.29.17"}).Format(1)
+        $sanentries = $sanentries -Split([Environment]::NewLine)
+        $singleline = ""
+        $sanentries | %{ $singleline += ($_ -split '=')[1]; $singleline += [Environment]::NewLine } 
+        $TextBoxSAN.Text = $singleline
+    }
+    
+}
 # Function to create a CSR using CertReq
 function CreateCSR {
     $InfFile = New-TemporaryFile
@@ -288,15 +341,28 @@ $ComboBoxHashAlgorithm.Items.Add('sha384') |out-null
 $ComboBoxHashAlgorithm.Items.Add('sha512') |out-null
 $ComboBoxHashAlgorithm.SelectedItem = $ComboBoxHashAlgorithm.Items[0]
 
+$TextBoxURL = New-Object System.Windows.Forms.TextBox
+$TextBoxURL.Location = New-Object System.Drawing.Point(450,20)
+$TextBoxURL.Size = New-Object System.Drawing.Size(350,20)
+$TextBoxURL.Text = "google.com"
+$form.Controls.Add($TextBoxURL)
+
+$ButtonFetchURL = New-Object System.Windows.Forms.Button
+$ButtonFetchURL.Location = New-Object System.Drawing.Size(805,15)
+$ButtonFetchURL.Size = New-Object System.Drawing.Size(120,30)
+$ButtonFetchURL.Text = "Fetch URL"
+$ButtonFetchURL.Add_Click({FetchURL})
+$Form.Controls.Add($ButtonFetchURL)
+
 $LabelCSR = New-Object System.Windows.Forms.Label
 $LabelCSR.Text = "CSR:"
 $LabelCSR.AutoSize = $true
-$LabelCSR.Location = New-Object System.Drawing.Size(450,26)
+$LabelCSR.Location = New-Object System.Drawing.Size(450,56)
 $Form.Controls.Add($LabelCSR)
 
 $TextBoxCSR = New-Object System.Windows.Forms.TextBox
-$TextBoxCSR.Location = New-Object System.Drawing.Point(450,48)
-$TextBoxCSR.Size = New-Object System.Drawing.Size(480,340)
+$TextBoxCSR.Location = New-Object System.Drawing.Point(450,80)
+$TextBoxCSR.Size = New-Object System.Drawing.Size(480,308)
 $TextBoxCSR.Multiline = $true
 $TextBoxCSR.ReadOnly = $true
 $TextBoxCSR.Font = New-Object System.Drawing.Font("Arial",8,[System.Drawing.FontStyle]::regular)
