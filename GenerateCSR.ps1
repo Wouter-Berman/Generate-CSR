@@ -41,7 +41,8 @@ function SaveRecentCSR {
         `"O`": `"$($TextBoxO.Text)`",
         `"L`": `"$($TextBoxL.Text)`",
         `"S`": `"$($TextBoxS.Text)`",
-        `"C`": `"$($TextBoxCO.Text)`"
+        `"C`": `"$($TextBoxCO.Text)`",
+        `"SAN`": `"$($TextBoxSAN.Text)`"
     }
 ]"
     $json = $jsonstring | ConvertFrom-Json 
@@ -64,6 +65,7 @@ function LoadRecentCSR {
     $TextBoxL.Text = $json[0].L
     $TextBoxS.Text = $json[0].S
     $TextBoxCO.Text = $json[0].C
+    $TextBoxSAN.Text = $json[0].SAN
 
     return $json
 }
