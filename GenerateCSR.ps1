@@ -95,6 +95,9 @@ function Get-SubjectPart ($subject, $part)
 
 function FetchURL {
     $URL = [uri]$TextBoxURL.Text
+    if( $URL.Scheme -ne "https") {
+        $URL = [uri]"https://$($TextBoxURL.Text)"
+    }
     $Certificate = $null
     $TcpClient = New-Object -TypeName System.Net.Sockets.TcpClient
     try {
