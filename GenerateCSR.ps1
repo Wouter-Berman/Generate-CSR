@@ -89,8 +89,22 @@ function ComboBoxHistorySelectedValueChanged
 
 function Get-SubjectPart ($subject, $part)
 {
-    $parts = $subject -split ','
-    (($parts | where{ $_.trim() -like "$part=*" }) -split "=")[1]
+    $subs = $subject -split ','
+    for ($i = 0; $i -lt $subs.Length; $i++)
+    { 
+        $sub = $subs[$i]
+        if( $sub.IndexOf( '"' ) -ne -1 )
+        {
+            $nextsub = $subs[$i+1]
+            $sub = "$sub,$nextsub" 
+            $sub = $sub.Replace( '"', '')
+            $subs[$i+1] = ''
+        }
+        $subs[$i] = $sub.Trim(' ')
+    }
+
+    $parts = $subs | where{ $_ -ne '' }
+    (($parts | where{ $_ -like "$part=*" }) -split "=")[1]
 }
 
 function FetchURL {
@@ -125,15 +139,13 @@ function FetchURL {
         if ($Certificate -isnot [System.Security.Cryptography.X509Certificates.X509Certificate2]) {
             $Certificate = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList $Certificate
         }
-        $infsubject = ($Certificate.Subject -split "`"")[1]
         $infsubject = $Certificate.Subject
-        $TextBoxCO.Text = Get-SubjectPart $infsubject 'C'
-        $TextBoxS.Text = Get-SubjectPart $infsubject 'S'
-        $TextBoxL.Text = Get-SubjectPart $infsubject 'L'
+        $TextBoxCN.Text = Get-SubjectPart $infsubject 'CN'
         $TextBoxO.Text = Get-SubjectPart $infsubject 'O'
         $TextBoxOU.Text = Get-SubjectPart $infsubject 'OU'
-        $infcn = Get-SubjectPart $infsubject 'CN'
-        $TextBoxCN.Text = $infcn
+        $TextBoxL.Text = Get-SubjectPart $infsubject 'L'
+        $TextBoxS.Text = Get-SubjectPart $infsubject 'S'
+        $TextBoxCO.Text = Get-SubjectPart $infsubject 'C'
         
         $sanentries = ($Certificate.Extensions | Where-Object {$_.Oid.Value -eq "2.5.29.17"}).Format(1)
         $sanentries = $sanentries -Split([Environment]::NewLine)
@@ -349,7 +361,7 @@ $ComboBoxHashAlgorithm.SelectedItem = $ComboBoxHashAlgorithm.Items[0]
 $TextBoxURL = New-Object System.Windows.Forms.TextBox
 $TextBoxURL.Location = New-Object System.Drawing.Point(450,20)
 $TextBoxURL.Size = New-Object System.Drawing.Size(350,20)
-$TextBoxURL.Text = "google.com"
+$TextBoxURL.Text = "github.com"
 $form.Controls.Add($TextBoxURL)
 
 $ButtonFetchURL = New-Object System.Windows.Forms.Button
