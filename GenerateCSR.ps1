@@ -123,8 +123,9 @@ function FetchURL {
 
         $SslStream = New-Object -TypeName System.Net.Security.SslStream -ArgumentList @($TcpStream, $true, $Callback)
         try {
-
-            $SslStream.AuthenticateAsClient('')
+            $xc = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2Collection
+            $TLS12Protocol = [System.Net.SecurityProtocolType] 'Tls12'
+            $sslStream.AuthenticateAsClient($URL.DnsSafeHost, $xc, $TLS12Protocol, $false);
             $Certificate = $SslStream.RemoteCertificate
 
         } finally {
