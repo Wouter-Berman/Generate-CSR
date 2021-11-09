@@ -221,9 +221,9 @@ $Form.Text = "Create CSR"
 $Form.WindowState = "Normal"
 
 $LabelHistory = New-Object System.Windows.Forms.Label
-$LabelHistory.Text = "History:*"
+$LabelHistory.Text = "History:"
 $LabelHistory.AutoSize = $true
-$LabelHistory.Location = New-Object System.Drawing.Size(49,20)
+$LabelHistory.Location = New-Object System.Drawing.Size(105,20)
 $Form.Controls.Add($LabelHistory)
 
 $ComboBoxHistory = New-Object System.Windows.Forms.ComboBox
@@ -359,18 +359,17 @@ $ComboBoxHashAlgorithm.Items.Add('sha384') |out-null
 $ComboBoxHashAlgorithm.Items.Add('sha512') |out-null
 $ComboBoxHashAlgorithm.SelectedItem = $ComboBoxHashAlgorithm.Items[0]
 
-$TextBoxURL = New-Object System.Windows.Forms.TextBox
-$TextBoxURL.Location = New-Object System.Drawing.Point(450,20)
-$TextBoxURL.Size = New-Object System.Drawing.Size(350,20)
-$TextBoxURL.Text = "github.com"
-$form.Controls.Add($TextBoxURL)
-
 $ButtonFetchURL = New-Object System.Windows.Forms.Button
-$ButtonFetchURL.Location = New-Object System.Drawing.Size(805,15)
-$ButtonFetchURL.Size = New-Object System.Drawing.Size(120,30)
-$ButtonFetchURL.Text = "Fetch URL"
+$ButtonFetchURL.Location = New-Object System.Drawing.Size(450,20)
+$ButtonFetchURL.Size = New-Object System.Drawing.Size(120,23)
+$ButtonFetchURL.Text = "< Fill from URL"
 $ButtonFetchURL.Add_Click({FetchURL})
 $Form.Controls.Add($ButtonFetchURL)
+
+$TextBoxURL = New-Object System.Windows.Forms.TextBox
+$TextBoxURL.Location = New-Object System.Drawing.Point(580,20)
+$TextBoxURL.Size = New-Object System.Drawing.Size(350,20)
+$form.Controls.Add($TextBoxURL)
 
 $LabelCSR = New-Object System.Windows.Forms.Label
 $LabelCSR.Text = "CSR:"
