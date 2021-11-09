@@ -10,9 +10,9 @@ Just run Generate-CSR.ps1 with powershell. The following GUI will be presented:
 
 Only the common name is a technically required field. All other fields are optional but most certificate providers require Organization, City, State and Country. If you do not know what to select for Key size and Hash Algorithm just leave the values unchanged. They are fine for normal use. Enter the information you want to include in the certificate.
 
-You can also read the certificate properties of a supplied url and hit Fetch:
+You can also read the certificate properties of a supplied url and hit Fill from URL:
 
-![Image of GUI](/images/guifetch.png)
+![Image of GUI](/images/gui_fill_from_url.png)
 
 After supplying the information hit "Generate CSR". 
 You will be asked to provide a name and location for the generated CSR file:
