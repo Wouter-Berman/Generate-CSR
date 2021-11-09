@@ -8,7 +8,7 @@ Add-Type -AssemblyName System.Windows.Forms
 # Function to show a Save File Dialog and return the path.
 function Read-SaveFileDialog{
     $SaveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-    $SaveFileDialog.InitialDirectory = $pwd
+    $SaveFileDialog.InitialDirectory = $pwd.Path
     $SaveFileDialog.Title = 'Save CSR file'
     $SaveFileDialog.Filter = 'txt files (*.txt)|*.txt|All files (*.*)|*.*'
     $SaveFileDialog.ShowHelp = $true
@@ -17,6 +17,145 @@ function Read-SaveFileDialog{
     return $SaveFileDialog.Filename
 }
 
+function SaveRecentCSR {
+    if( $null -eq (Get-Item -Path HKCU:\Software\GenerateCSR -ErrorAction:SilentlyContinue)  )
+    {
+        New-Item -Path HKCU:\Software\GenerateCSR
+    }
+
+    foreach( $b in ( 4,3,2,1,0) )
+    {
+        if( $b -eq 4) {
+            Remove-ItemProperty -Path HKCU:\Software\GenerateCSR -Name "Recent$b" -ErrorAction SilentlyContinue
+        }
+        else {
+            Rename-ItemProperty -Path HKCU:\Software\GenerateCSR -Name "Recent$b" -NewName "Recent$($b+1)" -ErrorAction SilentlyContinue
+        }
+    }
+
+    $jsonstring = "
+[
+    {
+        `"CN`": `"$($TextBoxCN.Text)`",
+        `"OU`": `"$($TextBoxOU.Text)`",
+        `"O`": `"$($TextBoxO.Text)`",
+        `"L`": `"$($TextBoxL.Text)`",
+        `"S`": `"$($TextBoxS.Text)`",
+        `"C`": `"$($TextBoxCO.Text)`",
+        `"SAN`": `"$($TextBoxSAN.Text)`"
+    }
+]"
+    $json = $jsonstring | ConvertFrom-Json 
+    $jsonstringcompressed = $json | ConvertTo-Json -Compress
+
+    Set-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name Recent0 -Value $jsonstringcompressed
+}
+
+function LoadRecentCSR {
+    param (
+        $recentitem
+    )
+    $recentname = "Recent"+($recentitem-1)
+    $jsonstring = (Get-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name $recentname).$recentname
+    $json = $jsonstring | Convertfrom-Json
+
+    $TextBoxCN.Text = $json[0].CN
+    $TextBoxOU.Text = $json[0].OU
+    $TextBoxO.Text = $json[0].O
+    $TextBoxL.Text = $json[0].L
+    $TextBoxS.Text = $json[0].S
+    $TextBoxCO.Text = $json[0].C
+    $TextBoxSAN.Text = $json[0].SAN
+
+    return $json
+}
+
+function ComboBoxHistorySelectedValueChanged
+{
+    if( $ComboBoxHistory.SelectedItem -eq '(new)')
+    {
+        $TextBoxCN.Text = ""
+        $TextBoxOU.Text = ""
+        $TextBoxO.Text = ""
+        $TextBoxL.Text = ""
+        $TextBoxS.Text = ""
+        $TextBoxCO.Text = ""
+    }
+    else 
+    {
+        LoadRecentCSR $ComboBoxHistory.SelectedIndex
+    }
+}
+
+function Get-SubjectPart ($subject, $part)
+{
+    $subs = $subject -split ','
+    for ($i = 0; $i -lt $subs.Length; $i++)
+    { 
+        $sub = $subs[$i]
+        if( $sub.IndexOf( '"' ) -ne -1 )
+        {
+            $nextsub = $subs[$i+1]
+            $sub = "$sub,$nextsub" 
+            $sub = $sub.Replace( '"', '')
+            $subs[$i+1] = ''
+        }
+        $subs[$i] = $sub.Trim(' ')
+    }
+
+    $parts = $subs | where{ $_ -ne '' }
+    (($parts | where{ $_ -like "$part=*" }) -split "=")[1]
+}
+
+function FetchURL {
+    $URL = [uri]$TextBoxURL.Text
+    if( $URL.Scheme -ne "https") {
+        $URL = [uri]"https://$($TextBoxURL.Text)"
+    }
+    $Certificate = $null
+    $TcpClient = New-Object -TypeName System.Net.Sockets.TcpClient
+    try {
+
+        $TcpClient.Connect($URL.DnsSafeHost, $URL.Port)
+        $TcpStream = $TcpClient.GetStream()
+
+        $Callback = { param($sender, $cert, $chain, $errors) return $true }
+
+        $SslStream = New-Object -TypeName System.Net.Security.SslStream -ArgumentList @($TcpStream, $true, $Callback)
+        try {
+            $xc = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2Collection
+            $TLS12Protocol = [System.Net.SecurityProtocolType] 'Tls12'
+            $sslStream.AuthenticateAsClient($URL.DnsSafeHost, $xc, $TLS12Protocol, $false);
+            $Certificate = $SslStream.RemoteCertificate
+
+        } finally {
+            $SslStream.Dispose()
+        }
+
+    } finally {
+        $TcpClient.Dispose()
+    }
+
+    if ($Certificate) {
+        if ($Certificate -isnot [System.Security.Cryptography.X509Certificates.X509Certificate2]) {
+            $Certificate = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList $Certificate
+        }
+        $infsubject = $Certificate.Subject
+        $TextBoxCN.Text = Get-SubjectPart $infsubject 'CN'
+        $TextBoxO.Text = Get-SubjectPart $infsubject 'O'
+        $TextBoxOU.Text = Get-SubjectPart $infsubject 'OU'
+        $TextBoxL.Text = Get-SubjectPart $infsubject 'L'
+        $TextBoxS.Text = Get-SubjectPart $infsubject 'S'
+        $TextBoxCO.Text = Get-SubjectPart $infsubject 'C'
+        
+        $sanentries = ($Certificate.Extensions | Where-Object {$_.Oid.Value -eq "2.5.29.17"}).Format(1)
+        $sanentries = $sanentries -Split([Environment]::NewLine)
+        $singleline = ""
+        $sanentries | %{ $singleline += ($_ -split '=')[1]; $singleline += [Environment]::NewLine } 
+        $TextBoxSAN.Text = $singleline
+    }
+    
+}
 # Function to create a CSR using CertReq
 function CreateCSR {
     $InfFile = New-TemporaryFile
@@ -60,6 +199,8 @@ function CreateCSR {
         } else {
             certreq -new $InfFile $CsrFile
         }
+
+        SaveRecentCSR
     }
     If ($InfFile) {
         Remove-Item $InfFile
@@ -78,6 +219,34 @@ $Form.StartPosition = "CenterScreen"
 $Form.FormBorderStyle = 'Fixed3D'
 $Form.Text = "Create CSR"
 $Form.WindowState = "Normal"
+
+$LabelHistory = New-Object System.Windows.Forms.Label
+$LabelHistory.Text = "History:*"
+$LabelHistory.AutoSize = $true
+$LabelHistory.Location = New-Object System.Drawing.Size(49,20)
+$Form.Controls.Add($LabelHistory)
+
+$ComboBoxHistory = New-Object System.Windows.Forms.ComboBox
+$ComboBoxHistory.Location = New-Object System.Drawing.Point(167,20)
+$ComboBoxHistory.Size = New-Object System.Drawing.Size(260,30)
+$ComboBoxHistory.DropDownHeight = 200
+$form.Controls.Add($ComboBoxHistory)
+$ComboBoxHistory.Items.Add('(new)') |out-null
+for ($i = 0; $i -lt 5; $i++) {
+    $jsonstring = Get-ItemProperty -Path Registry::HKEY_CURRENT_USER\Software\GenerateCSR -Name "Recent$i" -ErrorAction SilentlyContinue
+    if( $null -ne $jsonstring)
+    {
+        $jsonstring = $jsonstring."Recent$i"
+        $json = $jsonstring | Convertfrom-Json
+        if ( $null -ne $json ){
+            $ComboBoxHistory.Items.Add($json[0].CN) |out-null
+        }
+    }
+}
+
+$ComboBoxHistory.SelectedItem = $ComboBoxHistory.Items[0]
+$ComboBoxHistory.Add_SelectedValueChanged({ComboBoxHistorySelectedValueChanged})
+
 
 $LabelCN = New-Object System.Windows.Forms.Label
 $LabelCN.Text = "Common name:*"
@@ -190,15 +359,28 @@ $ComboBoxHashAlgorithm.Items.Add('sha384') |out-null
 $ComboBoxHashAlgorithm.Items.Add('sha512') |out-null
 $ComboBoxHashAlgorithm.SelectedItem = $ComboBoxHashAlgorithm.Items[0]
 
+$TextBoxURL = New-Object System.Windows.Forms.TextBox
+$TextBoxURL.Location = New-Object System.Drawing.Point(450,20)
+$TextBoxURL.Size = New-Object System.Drawing.Size(350,20)
+$TextBoxURL.Text = "github.com"
+$form.Controls.Add($TextBoxURL)
+
+$ButtonFetchURL = New-Object System.Windows.Forms.Button
+$ButtonFetchURL.Location = New-Object System.Drawing.Size(805,15)
+$ButtonFetchURL.Size = New-Object System.Drawing.Size(120,30)
+$ButtonFetchURL.Text = "Fetch URL"
+$ButtonFetchURL.Add_Click({FetchURL})
+$Form.Controls.Add($ButtonFetchURL)
+
 $LabelCSR = New-Object System.Windows.Forms.Label
 $LabelCSR.Text = "CSR:"
 $LabelCSR.AutoSize = $true
-$LabelCSR.Location = New-Object System.Drawing.Size(450,26)
+$LabelCSR.Location = New-Object System.Drawing.Size(450,56)
 $Form.Controls.Add($LabelCSR)
 
 $TextBoxCSR = New-Object System.Windows.Forms.TextBox
-$TextBoxCSR.Location = New-Object System.Drawing.Point(450,48)
-$TextBoxCSR.Size = New-Object System.Drawing.Size(480,340)
+$TextBoxCSR.Location = New-Object System.Drawing.Point(450,80)
+$TextBoxCSR.Size = New-Object System.Drawing.Size(480,308)
 $TextBoxCSR.Multiline = $true
 $TextBoxCSR.ReadOnly = $true
 $TextBoxCSR.Font = New-Object System.Drawing.Font("Arial",8,[System.Drawing.FontStyle]::regular)
