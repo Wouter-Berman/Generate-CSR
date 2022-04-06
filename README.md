@@ -1,5 +1,5 @@
 # Generate-CSR
-Powershell tool to generate a Certificate Signing Request (CSR) using a GUI interface
+GUI tool to generate a Certificate Signing Request (CSR) written in PowerShell
 
 I have been looking for a Windows GUI tool to create certificate signing requests which would allow for Subject Alt names. DigiCert Certificate Utility for Windows provides such functionality but uses a hashing algorithm which is not secure anymore. There are several Powershell scripts with this functionality, but none provide a GUI. So I decided to write my own. As PowerShell does not include functionality to generate a CSR the script is using CertReq.exe which is included on Windows Machines by default.
 
