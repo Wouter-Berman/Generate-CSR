@@ -195,9 +195,9 @@ function CreateCSR {
         $InfData |Out-File -Append -FilePath $InfFile.PSPath
         # CertReq requires elevation. So let's run elevated
         if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-            Start-Process -wait -Verb RunAs certreq -ArgumentList "-new $InfFile $CsrFile"
+            Start-Process -wait -Verb RunAs certreq -ArgumentList "-new `"$InfFile`" `"$CsrFile`""
         } else {
-            certreq -new $InfFile $CsrFile
+            certreq -new "$InfFile" "$CsrFile"
         }
 
         SaveRecentCSR
