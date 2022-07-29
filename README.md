@@ -14,7 +14,7 @@ You can also read the certificate properties of a supplied url and hit Fill from
 
 ![Image of GUI](/images/gui_fill_from_url.png)
 
-After supplying the information hit "Generate CSR". 
+After supplying the information hit "Create CSR". 
 You will be asked to provide a name and location for the generated CSR file:
 
 ![Image of save file dialog](/images/dialog.png)
