@@ -8,7 +8,7 @@ Just run Generate-CSR.ps1 with powershell. The following GUI will be presented:
 
 ![Image of GUI](/images/gui.png)
 
-Only the common name is a technically required field. All other fields are optional but most certificate providers require Organization, City, State and Country. If you do not know what to select for Key size and Hash Algorithm just leave the values unchanged. They are fine for normal use. Enter the information you want to include in the certificate.
+Only the common name is a technically required field. All other fields are optional but most certificate providers require Organization, City, State and Country. The Subject alt names field can contain multiple host names. IPv4 and IPv6 addresses are also supported. This field is only used when you buy a Multy Domain certificate. If you do not know what to select for Key size and Hash Algorithm just leave the values unchanged. They are fine for normal use. Enter the information you want to include in the certificate.
 
 You can also read the certificate properties of a supplied url and hit Fill from URL:
 
