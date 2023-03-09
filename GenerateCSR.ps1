@@ -170,13 +170,12 @@ function CreateCSR {
         }
 
         $SubjectValue = ""
-        $SubjectValue += if($TextBoxCN.Text) { "CN=$($TextBoxCN.Text),"} else { "" }
-        $SubjectValue += if($TextBoxOU.Text) { "OU=$($TextBoxOU.Text),"} else { "" }
-        $SubjectValue += if($TextBoxO.Text) { "O=$($TextBoxO.Text)," } else { "" }
-        $SubjectValue += if($TextBoxL.Text) { "L=$($TextBoxL.Text)," } else { "" }
-        $SubjectValue += if($TextBoxS.Text) { "S=$($TextBoxS.Text)," } else { "" }
-        $SubjectValue += if($TextBoxCO.Text) { "C=$($TextBoxCO.Text)," } else { "" }
-        $SubjectValue = $SubjectValue -replace ".$" # Remove trailing comma
+        $SubjectValue += "CN=$($TextBoxCN.Text
+        $SubjectValue += if($TextBoxOU.Text) { ",OU=$($TextBoxOU.Text),"} else { "" }
+        $SubjectValue += if($TextBoxO.Text) { ",O=$($TextBoxO.Text)" } else { "" }
+        $SubjectValue += if($TextBoxL.Text) { ",L=$($TextBoxL.Text)" } else { "" }
+        $SubjectValue += if($TextBoxS.Text) { ",S=$($TextBoxS.Text)" } else { "" }
+        $SubjectValue += if($TextBoxCO.Text) { ",C=$($TextBoxCO.Text)" } else { "" }
 
         $InfData = '[Version]'
         $InfData += "`r`nSignature = `"`$Windows NT`$`""
