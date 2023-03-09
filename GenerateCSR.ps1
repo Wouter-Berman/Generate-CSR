@@ -163,6 +163,9 @@ function CreateCSR {
             if ( $TextBoxSAN.Lines[$i - 1] -match '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$' ) {
                 $SAN = $SAN + "`r`n_continue_ = `"ipaddress=$($TextBoxSAN.Lines[$i-1])`&`""
             }
+            elseif ( $TextBoxSAN.Lines[$i - 1] -match '^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$' ) {
+                $SAN = $SAN + "`r`n_continue_ = `"ipaddressv6=$($TextBoxSAN.Lines[$i-1])`&`""
+            }
             else {
                 $SAN = $SAN + "`r`n_continue_ = `"dns=$($TextBoxSAN.Lines[$i-1])`&`""
             }
