@@ -169,10 +169,19 @@ function CreateCSR {
             $i++
         }
 
+        $SubjectValue = ""
+        $SubjectValue += if($TextBoxCN.Text) { "CN=$($TextBoxCN.Text),"} else { "" }
+        $SubjectValue += if($TextBoxOU.Text) { "OU=$($TextBoxOU.Text),"} else { "" }
+        $SubjectValue += if($TextBoxO.Text) { "O=$($TextBoxO.Text)," } else { "" }
+        $SubjectValue += if($TextBoxL.Text) { "L=$($TextBoxL.Text)," } else { "" }
+        $SubjectValue += if($TextBoxS.Text) { "S=$($TextBoxS.Text)," } else { "" }
+        $SubjectValue += if($TextBoxCO.Text) { "C=$($TextBoxCO.Text)," } else { "" }
+        $SubjectValue = $SubjectValue -replace ".$" # Remove trailing comma
+
         $InfData = '[Version]'
         $InfData += "`r`nSignature = `"`$Windows NT`$`""
         $InfData += "`r`n`r`n[NewRequest]"
-        $InfData += "`r`nSubject = `"CN=$($TextBoxCN.Text), OU=$($TextBoxOU.Text), O=$($TextBoxO.Text), L=$($TextBoxL.Text), S=$($TextBoxS.Text), C=$($TextBoxCO.Text)`""
+        $InfData += "`r`nSubject = `"$SubjectValue`""
         $InfData += "`r`nKeyLength = $($ComboBoxKeySize.SelectedItem)"
         $InfData += "`r`nKeySpec = 1"
         $InfData += "`r`nExportable = TRUE"
@@ -408,6 +417,3 @@ $Form.Controls.Add($CancelButton)
 
 # Show the form
 $Form.ShowDialog() | Out-Null
-
-
-
